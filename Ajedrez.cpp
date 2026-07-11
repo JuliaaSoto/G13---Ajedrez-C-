@@ -1,8 +1,9 @@
 #include <iostream>
 #include <vector>
-#include <cctype>
 
 using namespace std;
+
+vector<vector<char>> tablero(8, vector<char>(8));
 
 void movimiento (){
 
@@ -84,12 +85,52 @@ void movimiento (){
 
     }while(((destino.length() != 2) || (destino[0] < 'a' || destino[0] > 'h') || (destino[1] < '1' || destino[1] > '8')));
 
+    int fila = 8 - (columna_origen - '0');
+    int columna = tolower(fila_origen) - 'a';
+
+    char pieza = tablero[fila][columna];
+
+    if(pieza == 'P'){
+
+        //peon()
+
+    }else if(pieza == 'R'){
+
+        //torre()
+
+    }else if(pieza == 'N'){
+
+        //caballo()
+
+    }else if(pieza == 'B'){
+
+        //alfil()
+
+    }else if(pieza == 'K'){
+
+        //rey()
+
+    }else if(pieza == 'Q'){
+
+        //reina()
+
+    }else if(pieza == '.'){
+
+        cout<<"No hay ninguna pieza en esta casilla"<<endl;
+        return;
+        
+    }else{
+
+        cout<<"Movimiento invalido"<<endl;
+        return;
+
+    }
+
 }
 
 void IniciarTablero(){
 
-    vector <vector<char>> tablero = {
-
+    tablero = {
         {'r', 'n' , 'b' , 'q' , 'k' , 'b' , 'n' , 'r'},
         {'p', 'p' , 'p' , 'p' , 'p' , 'p' , 'p' , 'p'},
         {'.', '.' , '.' , '.' , '.' , '.' , '.' , '.'},
@@ -97,10 +138,14 @@ void IniciarTablero(){
         {'.', '.' , '.' , '.' , '.' , '.' , '.' , '.'},
         {'.', '.' , '.' , '.' , '.' , '.' , '.' , '.'},
         {'P', 'P' , 'P' , 'P' , 'P' , 'P' , 'P' , 'P'},
-        {'R', 'N' , 'B' , 'K' , 'Q' , 'B' , 'N' , 'R'}
+        {'R', 'N' , 'B' , 'Q' , 'K' , 'B' , 'N' , 'R'}
     };
 
     cout<<endl;
+
+}
+
+void mostrarTablero(){
 
     for(int i = 0; i < 8 ; i++){
 
@@ -116,8 +161,19 @@ void IniciarTablero(){
 
     cout<<endl;
 
-    movimiento();
+}
 
+void partida(){
+
+    IniciarTablero();
+
+    while(true){
+
+        mostrarTablero();
+
+        movimiento();
+
+    }
 
 }
 
@@ -144,7 +200,7 @@ void menu(){
 
         if (opcion == 1){
 
-            IniciarTablero();
+            partida();
 
         }else if (opcion == 2){
 
@@ -165,6 +221,7 @@ void menu(){
     }while(opcion < 1 || opcion > 3);
 
 }
+
 
 int main(){
 
