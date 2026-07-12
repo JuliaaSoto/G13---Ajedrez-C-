@@ -4,6 +4,187 @@
 using namespace std;
 
 vector<vector<char>> tablero(8, vector<char>(8));
+bool turnoBlanco = true;
+
+void peon(int fila_origen, int fila_destino, int columna_origen, int columna_destino){
+
+    int movimiento = fila_destino - fila_origen;
+    bool validacion = true;
+
+    if (turnoBlanco){
+
+        if (movimiento == -2){
+
+            if (columna_origen == columna_destino){
+
+                if (fila_origen == 6){
+
+                    if (tablero[fila_origen - 1][columna_origen] == '.'){
+
+                        if(tablero[fila_destino][columna_destino] == '.'){
+
+                            tablero[fila_destino][columna_destino] = tablero[fila_origen][columna_origen];
+                            tablero[fila_origen][columna_origen] = '.';
+                            turnoBlanco = false;
+
+                        }else{
+
+                            validacion = false;
+            
+                        }
+
+                    }else{
+
+                        validacion = false;
+
+                    }
+
+                }else{
+
+                    validacion = false;
+
+                }
+
+            }else{
+
+                validacion = false;
+
+            }
+        
+        }else if(movimiento == -1){
+
+            if (columna_origen == columna_destino){
+
+                if(tablero[fila_destino][columna_destino] == '.'){
+
+                    tablero[fila_destino][columna_destino] = tablero[fila_origen][columna_origen];
+                    tablero[fila_origen][columna_origen] = '.';
+                    turnoBlanco = false;
+
+                }else{
+
+                    validacion = false;
+            
+                }
+
+            }else if (columna_destino == columna_origen+1 || columna_destino == columna_origen-1){
+
+                if(islower(tablero[fila_destino][columna_destino])){
+
+                    tablero[fila_destino][columna_destino] = tablero[fila_origen][columna_origen];
+                    tablero[fila_origen][columna_origen] = '.';
+                    turnoBlanco = false;
+
+                }else{
+
+                    validacion = false;
+
+                }
+
+            }else{
+
+                validacion = false;
+
+            }
+
+        }else{
+
+            validacion = false;
+
+        }
+        
+    }else{
+
+        if (movimiento == 2){
+
+            if (columna_origen == columna_destino){
+
+                if (fila_origen == 1){
+
+                    if (tablero[fila_origen + 1][columna_origen] == '.'){
+
+                        if(tablero[fila_destino][columna_destino] == '.'){
+
+                            tablero[fila_destino][columna_destino] = tablero[fila_origen][columna_origen];
+                            tablero[fila_origen][columna_origen] = '.';
+                            turnoBlanco = true;
+
+                        }else{
+
+                            validacion = false;
+            
+                        }
+
+                    }else{
+
+                        validacion = false;
+
+                    }
+
+                }else{
+
+                    validacion = false;
+
+                }
+
+            }else{
+
+                validacion = false;
+
+            }
+        
+        }else if(movimiento == 1){
+
+            if (columna_origen == columna_destino){
+
+                if(tablero[fila_destino][columna_destino] == '.'){
+
+                    tablero[fila_destino][columna_destino] = tablero[fila_origen][columna_origen];
+                    tablero[fila_origen][columna_origen] = '.';
+                    turnoBlanco = true;
+
+                }else{
+
+                    validacion = false;
+            
+                }
+
+            }else if (columna_destino == columna_origen+1 || columna_destino == columna_origen-1){
+
+                if(isupper(tablero[fila_destino][columna_destino])){
+
+                    tablero[fila_destino][columna_destino] = tablero[fila_origen][columna_origen];
+                    tablero[fila_origen][columna_origen] = '.';
+                    turnoBlanco = true;
+
+                }else{
+
+                    validacion = false;
+
+                }
+
+            }else{
+
+                validacion = false;
+
+            }
+
+        }else{
+
+            validacion = false;
+
+        }
+
+    }
+
+    if(!validacion){
+
+        cout<<"Movimiento invalido para peon"<<endl;
+
+    }
+    
+}
+
 
 void movimiento (){
 
@@ -85,14 +266,18 @@ void movimiento (){
 
     }while(((destino.length() != 2) || (destino[0] < 'a' || destino[0] > 'h') || (destino[1] < '1' || destino[1] > '8')));
 
-    int fila = 8 - (columna_origen - '0');
-    int columna = tolower(fila_origen) - 'a';
+    int filaOrigen = 8 - (columna_origen - '0');
+    int columnaOrigen = tolower(fila_origen) - 'a';
 
-    char pieza = tablero[fila][columna];
+    int filaDestino = 8 - (columna_destino - '0');
+    int columnaDestino = tolower(fila_destino) - 'a';
 
-    if(pieza == 'P'){
+    char pieza = tablero[filaOrigen][columnaOrigen];
+    
 
-        //peon()
+    if(pieza == 'P' || pieza == 'p'){
+
+        peon(filaOrigen,filaDestino,columnaOrigen, columnaDestino  );
 
     }else if(pieza == 'R'){
 
@@ -168,6 +353,8 @@ void partida(){
     IniciarTablero();
 
     while(true){
+
+        cout<<endl;
 
         mostrarTablero();
 
