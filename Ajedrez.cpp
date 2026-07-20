@@ -5,6 +5,8 @@ using namespace std;
 
 vector<vector<char>> tablero(8, vector<char>(8));
 bool turnoBlanco = true;
+string JugadorBlancas;
+string JugadorNegras;
 
 void peon(int fila_origen, int fila_destino, int columna_origen, int columna_destino){
 
@@ -179,7 +181,7 @@ void peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
     if(!validacion){
 
-        cout<<"Movimiento invalido para peon"<<endl;
+        cout<<"Movimiento invalido"<<endl;
 
     }
     
@@ -313,6 +315,8 @@ void movimiento (){
 
 }
 
+
+
 void IniciarTablero(){
 
     tablero = {
@@ -334,14 +338,46 @@ void mostrarTablero(){
 
     for(int i = 0; i < 8 ; i++){
 
-        for (int j = 0; j < 8; j++){
+        if(i==0){
 
-            cout<<tablero[i][j]<<" ";
+            cout<<"                            a   b   c   d   e   f   g   h "<<endl;
+            cout<<"                          ---------------------------------"<<endl;
 
         }
 
-        cout<<endl;
+        cout<<"                       "<<8-i<<"  ";
 
+        for (int j = 0; j < 8; j++){
+
+            if(j==0){
+
+                cout<<"| ";
+
+            }
+
+            if(tablero[i][j] == '.'){
+
+                cout<<"  | ";
+
+            }else{
+
+                cout<<tablero[i][j]<<" "<<"|"<<" ";
+
+            }
+                
+
+        }
+
+        cout<<" "<<8-i<<endl;;
+
+        cout<<"                          ---------------------------------"<<endl;
+
+        if(i==7){
+
+            cout<<"                            a   b   c   d   e   f   g   h "<<endl;
+
+        }
+        
     }
 
     cout<<endl;
@@ -350,6 +386,12 @@ void mostrarTablero(){
 
 void partida(){
 
+    cout<<"Ingrese el nombre del jugador de las blancas (porfavor no agregar espacios): ";
+    cin>>JugadorBlancas;
+
+    cout<<"Ingrese el nombre del jugador de las negras (porfavor no agregar espacios): ";
+    cin>>JugadorNegras;
+
     IniciarTablero();
 
     while(true){
@@ -357,6 +399,18 @@ void partida(){
         cout<<endl;
 
         mostrarTablero();
+
+        if(turnoBlanco){
+
+            cout<<"Turno de los blancos ("<<JugadorBlancas<<")";
+
+        }else{
+
+            cout<<"Turno de los negros ("<<JugadorNegras<<")";
+
+        }
+
+        cout<<endl;
 
         movimiento();
 
