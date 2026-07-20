@@ -196,7 +196,6 @@ void movimiento (){
     char fila_destino;
     char columna_origen;
     char columna_destino;
-    bool captura = false;
 
     do{
 
