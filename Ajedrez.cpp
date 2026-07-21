@@ -1,10 +1,14 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <map>
 
 using namespace std;
 
 vector<vector<char>> tablero(8, vector<char>(8));
 bool turnoBlanco = true;
+string jugadorBlanco;
+string jugadorNegro;
 
 bool peon(int fila_origen, int fila_destino,
           int columna_origen, int columna_destino);
@@ -25,6 +29,10 @@ bool reina(int fila_origen, int fila_destino,
            int columna_origen, int columna_destino);
 void promocionPeon();
 void mostrarTablero();
+void actualizarPuntaje(string jugador, int puntosGanados);
+void mostrarPuntajes();
+void guardarMovimiento(string origen, string destino);
+int contarMovimientos(ifstream &archivo);
                       
 bool reyBlancoMovido = false;
 bool reyNegroMovido = false;
@@ -1921,7 +1929,7 @@ if(movimientoRealizado){
     }
 
 }
-
+guardarMovimiento(origen,destino);
 turnoBlanco = !turnoBlanco;
 if(turnoBlanco){
 
@@ -1937,6 +1945,8 @@ if(turnoBlanco){
         cout<<"¡¡JAQUE MATE!! Ganaron las negras"<<endl;
 		
 		mostrarTablero();
+		
+		actualizarPuntaje(jugadorNegro,1);
 		
         exit(0);
 
@@ -1958,6 +1968,8 @@ if(turnoBlanco){
         cout<<"¡¡JAQUE MATE!! Ganaron las blancas"<<endl;
 		
 		mostrarTablero();
+		
+		actualizarPuntaje(jugadorBlanco,1);
 		
         exit(0);
 
@@ -2028,8 +2040,99 @@ void IniciarTablero(){
 
 }
 
+void actualizarPuntaje(string jugador, int puntosGanados){
+
+    map<string,int> puntajes;
+
+    ifstream archivoEntrada("puntajes.txt");
+
+    string nombre;
+    int puntos;
+
+    while(archivoEntrada >> nombre >> puntos){
+        puntajes[nombre] = puntos;
+    }
+
+    archivoEntrada.close();
+
+    puntajes[jugador] += puntosGanados;
+
+    ofstream archivoSalida("puntajes.txt");
+
+    for(auto jugador : puntajes){
+        archivoSalida << jugador.first << " " << jugador.second << endl;
+    }
+
+    archivoSalida.close();
+}
+
+void mostrarPuntajes(){
+
+    ifstream archivo("puntajes.txt");
+
+    if(!archivo.is_open()){
+
+        cout << "No existe el archivo de puntajes." << endl;
+        return;
+
+    }
+
+    string nombre;
+    int puntos;
+
+    cout << endl;
+    cout << "========== PUNTAJES ==========" << endl;
+
+    while(archivo >> nombre >> puntos){
+
+        cout << nombre << " : " << puntos << " puntos" << endl;
+
+    }
+
+    cout << "==============================" << endl << endl;
+
+    archivo.close();
+
+}
+
+void guardarMovimiento(string origen, string destino){
+
+    ofstream archivo("movimientos.txt", ios::app);
+
+    if(archivo.is_open()){
+
+        archivo << origen << "-" << destino << endl;
+
+        archivo.close();
+
+    }
+
+}
+
+int contarMovimientos(ifstream &archivo){
+
+    string linea;
+
+    if(!getline(archivo, linea)){
+
+        return 0;
+
+    }
+    
+    cout << linea << endl;
+
+    return 1 + contarMovimientos(archivo);
+
+}
+
 
 void partida(){
+	
+	cout << "Nombre del jugador de las blancas: ";
+    cin >> jugadorBlanco;
+
+    cout << "Nombre del jugador de las negras: ";
+    cin >> jugadorNegro;
 
     IniciarTablero();
 
@@ -2056,8 +2159,10 @@ void menu(){
     cout<<endl;
 
     cout<<"1. Iniciar (PvP)"<<endl;
-    cout<<"2. Instrucciones"<<endl;
-    cout<<"3. Salir"<<endl;
+	cout<<"2. Ver puntajes"<<endl;
+	cout<<"3. Contar movimientos"<<endl;
+	cout<<"4. Instrucciones"<<endl;
+	cout<<"5. Salir"<<endl;
 
     do{
 
@@ -2072,21 +2177,100 @@ void menu(){
 
         }else if (opcion == 2){
 
-            cout<<"Función no hecha bruh";
+            mostrarPuntajes();
+
+        }else if(opcion == 3){
+
+    ifstream archivo("movimientos.txt");
+
+    if(!archivo.is_open()){
+
+        cout << "No hay movimientos registrados." << endl;
+
+    }else{
+
+        cout << "===== HISTORIAL DE MOVIMIENTOS =====" << endl;
+
+    int cantidad = contarMovimientos(archivo);
+
+    cout << "===================================" << endl;
+    cout << "Total de movimientos: " << cantidad << endl;
+
+    archivo.close();
+
+    }
+
+	}else if (opcion == 4){
+
+            cout << "==============================================================" << endl;
+			cout << "                    INSTRUCCIONES DEL JUEGO                   " << endl;
+			cout << "==============================================================" << endl;
+			cout << endl;
+
+			cout << "OBJETIVO DEL JUEGO" << endl;
+			cout << "El objetivo del ajedrez es dar jaque mate al rey enemigo." << endl;
+			cout << "Un rey esta en jaque mate cuando no puede escapar de un" << endl;
+			cout << "ataque y la partida termina inmediatamente." << endl;
+			cout << endl;
+
+			cout << "MOVIMIENTO DE LAS PIEZAS" << endl;
+			cout << "- Peon (P): Avanza una casilla. En su primer movimiento" << endl;
+			cout << "  puede avanzar dos casillas. Captura en diagonal." << endl;
+			cout << "- Torre (R): Se mueve cualquier cantidad de casillas en" << endl;
+			cout << "  linea recta, horizontal o vertical." << endl;
+			cout << "- Caballo (N): Se mueve en forma de L y puede saltar" << endl;
+			cout << "  sobre otras piezas." << endl;
+			cout << "- Alfil (B): Se mueve cualquier cantidad de casillas en" << endl;
+			cout << "  diagonal." << endl;
+			cout << "- Reina (Q): Combina los movimientos de la torre y el" << endl;
+			cout << "  alfil." << endl;
+			cout << "- Rey (K): Se mueve una casilla en cualquier direccion." << endl;
+			cout << endl;
+
+			cout << "REGLAS ESPECIALES" << endl;
+			cout << "- Enroque: Se realiza si el rey y la torre no se han" << endl;
+			cout << "  movido y no existen piezas entre ellos." << endl;
+			cout << "- Promocion: Cuando un peon llega al extremo opuesto del" << endl;
+			cout << "  tablero puede convertirse en Reina, Torre, Alfil o" << endl;
+			cout << "  Caballo." << endl;
+			cout << endl;
+
+			cout << "COMO JUGAR" << endl;
+			cout << "Ingrese primero la casilla de origen y luego la casilla" << endl;
+			cout << "de destino utilizando la notacion del tablero." << endl;
+			cout << endl;
+			cout << "Ejemplos:" << endl;
+			cout << "Origen : e2" << endl;
+			cout << "Destino: e4" << endl;
+			cout << endl;
+			cout << "Origen : g1" << endl;
+			cout << "Destino: f3" << endl;
+			cout << endl;
+
+			cout << "El programa verificara automaticamente si el movimiento" << endl;
+			cout << "es valido segun las reglas del ajedrez." << endl;
+			cout << endl;
+
+			cout << "PUNTAJES" << endl;
+			cout << "Al finalizar una partida por jaque mate, el ganador" << endl;
+			cout << "obtendra un punto. Los puntajes se almacenan en el" << endl;
+			cout << "archivo 'puntajes.txt' y pueden consultarse desde el menu." << endl;
+			cout << endl;
+
+			cout << "==============================================================" << endl;
+            
+        }else if(opcion == 5){
+        	
+        	cout<<"Gracias por jugar";
             cout<<endl;
+            
+		}else{
 
-        }else if (opcion == 3){
-
-            cout<<"Gracias por jugar";
-            cout<<endl;
-
-        }else{
-
-            cout<<"Debes escoger un número entre 1 y 3"<<endl;
+            cout<<"Debes escoger un número entre 1 y 5"<<endl;
 
         }
 
-    }while(opcion < 1 || opcion > 3);
+    }while(opcion < 1 || opcion > 5);
 
 }
 
