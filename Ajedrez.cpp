@@ -1988,23 +1988,46 @@ void IniciarTablero(){
 
 }
 
-void mostrarTablero(){
+    void mostrarTablero(){
 
-    for(int i = 0; i < 8 ; i++){
+    cout << endl;
 
-        for (int j = 0; j < 8; j++){
+    // Letras superiores
+    cout << "      a   b   c   d   e   f   g   h" << endl;
 
-            cout<<tablero[i][j]<<" ";
+    cout << "    ---------------------------------" << endl;
+
+
+    for(int i = 0; i < 8; i++){
+
+        // Número de fila izquierda
+        cout << " " << 8-i << "  | ";
+
+        for(int j = 0; j < 8; j++){
+
+            cout << tablero[i][j];
+
+            if(j < 7){
+                cout << " | ";
+            }
 
         }
 
-        cout<<endl;
+        // Número de fila derecha
+        cout << " | " << 8-i << endl;
+
+        cout << "    ---------------------------------" << endl;
 
     }
 
-    cout<<endl;
+
+    // Letras inferiores
+    cout << "      a   b   c   d   e   f   g   h" << endl;
+
+    cout << endl;
 
 }
+
 
 void partida(){
 
