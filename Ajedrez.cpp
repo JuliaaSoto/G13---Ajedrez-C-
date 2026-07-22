@@ -2,17 +2,52 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include <string>
+#include <Windows.h>
 
 using namespace std;
 
+// Se declara la matriz del tablero de manera universal
 vector<vector<char>> tablero(8, vector<char>(8));
+
+vector<string> historial;
+
+// Al igual que el turno
 bool turnoBlanco = true;
+
+// Al igual si es fin de partida
+bool finDePartida = false;
+
+// Variable global para tablas por 50 movimientos
+int contador50Movimientos = 0;
+
+
+// Y los nombres de los jugadores
 string jugadorBlanco;
 string jugadorNegro;
+string ganador;
 
-bool peon(int fila_origen, int fila_destino,
-          int columna_origen, int columna_destino);
+// Declaraciones de funciones para más adelante
+void menu();
+void instrucciones();
+void mostrarPuntajes();
+void iniciarTablero();
+void mostrarTablero();
+void partida();
+void movimiento();
+void mostrarHistorial();
+void guardarHistorial();
 
+// La función del peón
+bool peon(int fila_origen, int fila_destino, 
+            int columna_origen, int columna_destino);
+
+// Variables utilizadas para controlar la captura al paso
+int enPassant_columna;
+int enPassant_fila;
+bool enPassantValido = false;
+
+// Las funciones de las demás piezas
 bool torre(int fila_origen, int fila_destino,
            int columna_origen, int columna_destino);
 
@@ -27,24 +62,16 @@ bool rey(int fila_origen, int fila_destino,
 
 bool reina(int fila_origen, int fila_destino,
            int columna_origen, int columna_destino);
-           
-bool tablas(bool blancas);
-bool materialInsuficiente();
-
-bool capturaAlPasoDisponible = false;
-
-int filaPeonAlPaso = -1;
-int columnaPeonAlPaso = -1;
-
-bool peonAlPasoBlanco;
 
 void promocionPeon();
 void mostrarTablero();
 void actualizarPuntaje(string jugador, int puntosGanados);
 void mostrarPuntajes();
-void guardarMovimiento(string origen, string destino);
-int contarMovimientos(ifstream &archivo);
-                      
+bool tieneMovimientosLegales (bool blancas);
+string notacionPieza(char pieza);
+
+// Variables que indican si el rey o las torres ya fueron movidos.
+// Son necesarias para validar el enroque.
 bool reyBlancoMovido = false;
 bool reyNegroMovido = false;
 
@@ -54,26 +81,74 @@ bool torreBlancaDerechaMovida = false;
 bool torreNegraIzquierdaMovida = false;
 bool torreNegraDerechaMovida = false;
 
+// Comprueba si una pieza pertenece al jugador blanco
 bool esPiezaBlanca(char pieza){
 
     return pieza >= 'A' && pieza <= 'Z';
 
 }
 
-
+// Comprueba si una pieza pertenece al jugador negro
 bool esPiezaNegra(char pieza){
 
     return pieza >= 'a' && pieza <= 'z';
 
 }
 
+// Convierte una pieza a su letra correspondiente en la notación
+// algebraica del ajedrez. Los peones no llevan letra.
+string notacionPieza(char pieza){
+
+    pieza = toupper(pieza);
+
+    if(pieza == 'P'){
+
+        return "";
+
+    }
+
+    if(pieza == 'N'){
+
+        return "N";
+
+    }
+
+    if(pieza == 'B'){
+
+        return "B";
+
+    }
+ 
+    if(pieza == 'R'){
+
+        return "R";
+
+    }
+
+    if(pieza == 'Q'){
+
+        return "Q";
+
+    }
+
+    if(pieza == 'K'){
+
+        return "K";
+
+    }
+
+    return "";
+
+}
+
+// Valida todos los movimientos permitidos para un peón
 bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_destino){
 
     int movimiento = fila_destino - fila_origen;
-    bool validacion = true;
 
     if (turnoBlanco){
 
+        // Avance doble en el primer movimiento.
         if (movimiento == -2){
 
             if (columna_origen == columna_destino){
@@ -84,32 +159,37 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
                         if(tablero[fila_destino][columna_destino] == '.'){
 
+                            enPassant_columna = columna_destino;
+                            enPassant_fila = fila_destino;
+                            enPassantValido = true;
+
                             return true;
 
                         }else{
 
-                            validacion = false;
+                            return false;
             
                         }
 
                     }else{
 
-                        validacion = false;
+                        return false;
 
                     }
 
                 }else{
 
-                    validacion = false;
+                    return false;
 
                 }
 
             }else{
 
-                validacion = false;
+                return false;
 
             }
-        
+
+        // Avance de una casilla.
         }else if(movimiento == -1){
 
             if (columna_origen == columna_destino){
@@ -120,34 +200,56 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
                 }else{
 
-                    validacion = false;
+                    return false;
             
                 }
 
+                // Captura en diagonal.
             }else if (columna_destino == columna_origen+1 || columna_destino == columna_origen-1){
 
                 if(islower(tablero[fila_destino][columna_destino])){
 
                     return true;
 
+                }else if (tablero[fila_destino][columna_destino] == '.'){
+
+                    // Captura al paso (En Passant).
+                    if (fila_origen == enPassant_fila && columna_destino == enPassant_columna){
+
+                        if(enPassantValido){
+
+                            return true;
+
+                        }else{
+
+                            return false;
+
+                        }
+
+                    }else{
+
+                        return false;
+
+                    }
+
                 }else{
 
-                    validacion = false;
+                    return false;
 
                 }
 
             }else{
 
-                validacion = false;
+                return false;
 
             }
 
         }else{
 
-            validacion = false;
+            return false;
 
         }
-        
+    // Y de igual forma para el peón negro, se diferencio usando la diferencia entre sus casillas de origen y destino y por la posición en las columnas del tablero 
     }else{
 
         if (movimiento == 2){
@@ -160,29 +262,33 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
                         if(tablero[fila_destino][columna_destino] == '.'){
 
+                            enPassant_columna = columna_destino;
+                            enPassant_fila = fila_destino;
+                            enPassantValido = true;
+
                             return true;
 
                         }else{
 
-                            validacion = false;
+                            return false;
             
                         }
 
                     }else{
 
-                        validacion = false;
+                        return false;
 
                     }
 
                 }else{
 
-                    validacion = false;
+                    return false;
 
                 }
 
             }else{
 
-                validacion = false;
+                return false;
 
             }
         
@@ -196,7 +302,7 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
                 }else{
 
-                    validacion = false;
+                    return false;
             
                 }
 
@@ -206,27 +312,38 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
                     return true;
 
+                }else if(fila_origen == enPassant_fila && columna_destino == enPassant_columna){
+
+                    if(enPassantValido){
+
+                        return true;
+
+                    }else{
+
+                        return false;
+
+                    }
+
                 }else{
 
-                    validacion = false;
+                    return false;
 
                 }
 
             }else{
 
-                validacion = false;
+                return false;
 
             }
 
         }else{
 
-            validacion = false;
+            return false;
 
         }
 
     }
 
-    return validacion;
 }
 
 bool torre(int fila_origen, int fila_destino, int columna_origen, int columna_destino){
@@ -303,6 +420,7 @@ bool torre(int fila_origen, int fila_destino, int columna_origen, int columna_de
             }
 
         }
+
         // Si el camino está libre, revisar la casilla destino
         
         if(validacion){
@@ -926,7 +1044,7 @@ bool reyEnJaque(bool reyBlanco){
 
     }
 
-    // Verificar si la casilla del rey está atacada
+    // Verificar si la casilla del rey est  atacada
     if(!encontrado){
 
     return false;
@@ -944,156 +1062,33 @@ bool reyEnJaque(bool reyBlanco){
 
 }
 
-bool capturaAlPaso(int filaOrigen, int filaDestino,
-                   int columnaOrigen, int columnaDestino){
+bool reyAhogado(bool blancas){
 
-    // Debe existir una captura al paso disponible
-    if(!capturaAlPasoDisponible){
-
-        return false;
-
-    }
-
-    char pieza = tablero[filaOrigen][columnaOrigen];
-
-    // Solo los peones pueden hacer captura al paso
-    if(pieza != 'P' && pieza != 'p'){
+    // Si el rey está en jaque, NO es rey ahogado
+    if(reyEnJaque(blancas)){
 
         return false;
 
     }
 
-    // El movimiento debe ser diagonal de una casilla
-    if(abs(columnaDestino - columnaOrigen) != 1){
+    // Si todavía tiene movimientos legales, tampoco
+    if(tieneMovimientosLegales(blancas)){
 
         return false;
 
     }
 
-    if(abs(filaDestino - filaOrigen) != 1){
-
-        return false;
-
-    }
-	
-    // La casilla de destino debe estar vacía
-    if(tablero[filaDestino][columnaDestino] != '.'){
-
-        return false;
-
-    }
-
-    // ===========================
-    // Captura al paso de blancas
-    // ===========================
-    if(pieza == 'P'){
-    	
-		//Para blancas
-		if(tablero[filaPeonAlPaso][columnaPeonAlPaso] != 'p'){
-
-    		return false;
-
-		}
-
-        // El peón negro debe estar al lado
-        if(filaOrigen != filaPeonAlPaso){
-
-    		return false;
-
-		}
-
-
-		if(abs(columnaOrigen - columnaPeonAlPaso) != 1){
-
-    		return false;
-
-		}
-
-
-		if(columnaDestino != columnaPeonAlPaso){
-
-    		return false;
-
-		}
-
-        if(peonAlPasoBlanco){
-
-            return false;
-
-        }
-
-        // Eliminar el peón negro
-        tablero[filaPeonAlPaso][columnaPeonAlPaso] = '.';
-
-        // Mover el peón blanco
-        tablero[filaDestino][columnaDestino] = 'P';
-        tablero[filaOrigen][columnaOrigen] = '.';
-
-        capturaAlPasoDisponible = false;
-
-        return true;
-
-    }
-
-    // ===========================
-    // Captura al paso de negras
-    // ===========================
-    if(pieza == 'p'){
-		
-		//Para negras
-		if(tablero[filaPeonAlPaso][columnaPeonAlPaso] != 'P'){
-
-    		return false;
-
-		}
-	
-        // El peón blanco debe estar al lado
-        if(filaOrigen != filaPeonAlPaso){
-
-    		return false;
-
-		}
-
-
-		if(abs(columnaOrigen - columnaPeonAlPaso) != 1){
-
-    		return false;
-
-		}
-
-
-		if(columnaDestino != columnaPeonAlPaso){
-
-    		return false;
-
-		}
-
-        if(!peonAlPasoBlanco){
-
-            return false;
-
-        }
-
-        // Eliminar el peón blanco
-        tablero[filaPeonAlPaso][columnaPeonAlPaso] = '.';
-
-        // Mover el peón negro
-        tablero[filaDestino][columnaDestino] = 'p';
-        tablero[filaOrigen][columnaOrigen] = '.';
-
-        capturaAlPasoDisponible = false;
-
-        return true;
-
-    }
-
-    return false;
+    // No está en jaque y no tiene movimientos
+    return true;
 
 }
 
+// Determina si un movimiento es válido llamando a la función
+// correspondiente según el tipo de pieza seleccionada.
 bool movimientoValido(int filaOrigen, int filaDestino,
                       int columnaOrigen, int columnaDestino){
 	
+    // Verificar que las coordenadas estén dentro del tablero
 	if(filaOrigen < 0 || filaOrigen > 7 ||
    filaDestino < 0 || filaDestino > 7 ||
    columnaOrigen < 0 || columnaOrigen > 7 ||
@@ -1102,17 +1097,19 @@ bool movimientoValido(int filaOrigen, int filaDestino,
     return false;
 
 	}
-	
+
+	// Obtener la pieza ubicada en la casilla de origen
 	char pieza = tablero[filaOrigen][columnaOrigen];
 	
 	if(pieza == '.'){
 
+    // No existe ninguna pieza para mover
     return false;
 
 	}
 	
 
-
+    // Llamar a la función correspondiente según el tipo de pieza
     if(pieza == 'P' || pieza == 'p'){
 
         return peon(filaOrigen,filaDestino,
@@ -1275,6 +1272,7 @@ bool tieneMovimientosLegales(bool blancas){
 
 }
 
+
 bool jaqueMate(bool blancas){
 
     if(reyEnJaque(blancas) && !tieneMovimientosLegales(blancas)){
@@ -1283,63 +1281,52 @@ bool jaqueMate(bool blancas){
 
     }
 
-
     return false;
 
 }
 
-bool tablas(bool blancas){
-
-    if(!reyEnJaque(blancas) &&
-       !tieneMovimientosLegales(blancas)){
-
-        return true;
-
-    }
-
-    return false;
-
-}
-
+// Tablas por material insuficiente
 bool materialInsuficiente(){
 
-    int peones = 0;
-    int torres = 0;
-    int reinas = 0;
+    int piezasBlancas = 0;
+    int piezasNegras = 0;
 
-    int alfiles = 0;
-    int caballos = 0;
-
+    // Recorre el tablero
     for(int i = 0; i < 8; i++){
 
         for(int j = 0; j < 8; j++){
 
-            switch(tablero[i][j]){
+            char pieza = tablero[i][j];
 
-                case 'P':
-                case 'p':
-                    peones++;
-                    break;
+            // Ignora las casillas vacias
+            if(pieza == '.'){
 
-                case 'R':
-                case 'r':
-                    torres++;
-                    break;
+                continue;
 
-                case 'Q':
-                case 'q':
-                    reinas++;
-                    break;
+            }
 
-                case 'B':
-                case 'b':
-                    alfiles++;
-                    break;
+            // Si existe un peón, torre o reina, sí puede haber mate
+            if(toupper(pieza) == 'P' ||
+               toupper(pieza) == 'R' ||
+               toupper(pieza) == 'Q'){
 
-                case 'N':
-                case 'n':
-                    caballos++;
-                    break;
+                return false;
+
+            }
+
+            // Contar alfiles y caballos
+            if(toupper(pieza) == 'B' ||
+               toupper(pieza) == 'N'){
+
+                if(isupper(pieza)){
+
+                    piezasBlancas++;
+
+                }else{
+
+                    piezasNegras++;
+
+                }
 
             }
 
@@ -1347,29 +1334,7 @@ bool materialInsuficiente(){
 
     }
 
-    // Si existe un peón, torre o reina todavía es posible hacer mate.
-    if(peones > 0 || torres > 0 || reinas > 0){
-
-        return false;
-
-    }
-
-    // Rey contra rey
-    if(alfiles == 0 && caballos == 0){
-
-        return true;
-
-    }
-
-    // Rey + un alfil contra rey
-    if(alfiles == 1 && caballos == 0){
-
-        return true;
-
-    }
-
-    // Rey + un caballo contra rey
-    if(alfiles == 0 && caballos == 1){
+    if(piezasBlancas <= 1 && piezasNegras <= 1){
 
         return true;
 
@@ -1402,7 +1367,7 @@ bool enroque(int filaOrigen, int filaDestino, int columnaOrigen, int columnaDest
 
     }
 
-    // Verificar que el rey no esté en jaque
+    // Verificar que el rey no está en jaque
     if(turnoBlanco){
 
         if(reyEnJaque(true)){
@@ -1432,7 +1397,7 @@ bool enroque(int filaOrigen, int filaDestino, int columnaOrigen, int columnaDest
 
         if(torreBlancaDerechaMovida){
 
-            cout<<"La torre ya se movió"<<endl;
+            cout<<"La torre ya se movi "<<endl;
             return false;
 
         }
@@ -1506,7 +1471,7 @@ bool enroque(int filaOrigen, int filaDestino, int columnaOrigen, int columnaDest
         // Verificar que la torre izquierda no se haya movido
         if(torreBlancaIzquierdaMovida){
 
-            cout<<"La torre ya se movió"<<endl;
+            cout<<"La torre ya se movi "<<endl;
             return false;
 
         }
@@ -1590,68 +1555,13 @@ bool enroque(int filaOrigen, int filaDestino, int columnaOrigen, int columnaDest
 
 void deshacerMovimiento(int fila_origen, int fila_destino,
                         int columna_origen, int columna_destino,
-                        char piezaMovida, char piezaCapturada,
-                        bool fueCapturaAlPaso){
+                        char piezaMovida, char piezaCapturada){
 
-    // Restaurar la pieza que se movió
-
+    // Regresar la pieza a su casilla original
     tablero[fila_origen][columna_origen] = piezaMovida;
 
-
-    if(fueCapturaAlPaso){
-
-        // Restaurar el peón eliminado
-
-        if(piezaMovida == 'P'){
-
-            tablero[fila_destino + 1][columna_destino] = 'p';
-
-        }
-
-
-        if(piezaMovida == 'p'){
-
-            tablero[fila_destino - 1][columna_destino] = 'P';
-
-        }
-
-
-        // Vaciar la casilla donde terminó el peón
-
-        tablero[fila_destino][columna_destino] = '.';
-
-
-    }else{
-
-
-        // Movimiento normal
-
-        tablero[fila_destino][columna_destino] = piezaCapturada;
-
-
-    }
-
-}
-
-void restaurarEstadoMovimiento(
-
-    bool reyBlanco,
-    bool reyNegro,
-
-    bool torreBI,
-    bool torreBD,
-
-    bool torreNI,
-    bool torreND){
-
-    reyBlancoMovido = reyBlanco;
-    reyNegroMovido = reyNegro;
-
-    torreBlancaIzquierdaMovida = torreBI;
-    torreBlancaDerechaMovida = torreBD;
-
-    torreNegraIzquierdaMovida = torreNI;
-    torreNegraDerechaMovida = torreND;
+    // Restaurar la pieza que había en el destino
+    tablero[fila_destino][columna_destino] = piezaCapturada;
 
 }
 
@@ -2081,37 +1991,19 @@ void movimiento (){
 	char piezaMovida = tablero[filaOrigen][columnaOrigen];
 	char piezaCapturada = tablero[filaDestino][columnaDestino];
 
-	// Guardar el estado de las banderas
-	bool reyBlancoMovidoAnterior = reyBlancoMovido;
-	bool reyNegroMovidoAnterior = reyNegroMovido;
+    // Verifica si aumenta la variable de 50 movimientos para generar tablas
+    if(toupper(piezaMovida) == 'P' || piezaCapturada != '.'){
 
-	bool torreBlancaIzquierdaMovidaAnterior = torreBlancaIzquierdaMovida;
-	bool torreBlancaDerechaMovidaAnterior = torreBlancaDerechaMovida;
+    contador50Movimientos = 0;
 
-	bool torreNegraIzquierdaMovidaAnterior = torreNegraIzquierdaMovida;
-	bool torreNegraDerechaMovidaAnterior = torreNegraDerechaMovida;	
+    }else{
 
-	if(piezaCapturada == 'R'){
+    contador50Movimientos++;
 
-    if(filaDestino == 7 && columnaDestino == 0)
-        torreBlancaIzquierdaMovida = true;
+    }
 
-    if(filaDestino == 7 && columnaDestino == 7)
-        torreBlancaDerechaMovida = true;
+    string jugada;
 
-}
-
-if(piezaCapturada == 'r'){
-
-    if(filaDestino == 0 && columnaDestino == 0)
-        torreNegraIzquierdaMovida = true;
-
-    if(filaDestino == 0 && columnaDestino == 7)
-        torreNegraDerechaMovida = true;
-
-}
-	bool fueCapturaAlPaso = false;
-	
 	bool movimientoRealizado = false;
 	bool fueEnroque = false;
     char piezaDestino = tablero[filaDestino][columnaDestino];
@@ -2132,49 +2024,21 @@ if(!turnoBlanco && islower(piezaDestino)){
 
 }
 
-if((pieza == 'K' || pieza == 'k') &&
-   abs(columnaDestino - columnaOrigen) == 2){
+if((pieza == 'K' || pieza == 'k') && abs(columnaDestino - columnaOrigen) == 2){
 
-    movimientoRealizado = enroque(filaOrigen,
-                                  filaDestino,
-                                  columnaOrigen,
-                                  columnaDestino);
+    movimientoRealizado = enroque(filaOrigen, filaDestino,
+                                  columnaOrigen, columnaDestino);
 
     if(movimientoRealizado){
 
-        fueEnroque = true;
+    	fueEnroque = true;
 
-    }
+	}
 
-}
-else if(pieza == 'P' || pieza == 'p'){
+}else{
 
-    movimientoRealizado = capturaAlPaso(filaOrigen,
-                                        filaDestino,
-                                        columnaOrigen,
-                                        columnaDestino);
-
-    if(movimientoRealizado){
-
-        fueCapturaAlPaso = true;
-
-    }
-    else{
-
-        movimientoRealizado = movimientoValido(filaOrigen,
-                                               filaDestino,
-                                               columnaOrigen,
-                                               columnaDestino);
-
-    }
-
-}
-else{
-
-    movimientoRealizado = movimientoValido(filaOrigen,
-                                           filaDestino,
-                                           columnaOrigen,
-                                           columnaDestino);
+    movimientoRealizado = movimientoValido(filaOrigen, filaDestino,
+                                           columnaOrigen, columnaDestino);
 
 }
 
@@ -2187,10 +2051,24 @@ if(!movimientoRealizado){
 
     if(movimientoRealizado){
 
-    if(!fueEnroque && !fueCapturaAlPaso){
+    if(!fueEnroque){
 
         tablero[filaDestino][columnaDestino] = piezaMovida;
         tablero[filaOrigen][columnaOrigen] = '.';
+
+        // Captura al paso
+        if(enPassantValido && piezaMovida == 'P' && piezaCapturada == '.' && abs(columnaDestino - columnaOrigen) == 1){
+
+        tablero[enPassant_fila][enPassant_columna] = '.';
+
+        }
+
+        if(enPassantValido && piezaMovida == 'p' && piezaCapturada == '.' && abs(columnaDestino - columnaOrigen) == 1){
+
+        tablero[enPassant_fila][enPassant_columna] = '.';
+
+        }
+		
 		
     }
         
@@ -2241,53 +2119,35 @@ if(movimientoRealizado){
         if(columnaDestino > columnaOrigen){
 
             deshacerEnroque(true,true);
-            restaurarEstadoMovimiento(
-
-    reyBlancoMovidoAnterior,
-    reyNegroMovidoAnterior,
-
-    torreBlancaIzquierdaMovidaAnterior,
-    torreBlancaDerechaMovidaAnterior,
-
-    torreNegraIzquierdaMovidaAnterior,
-    torreNegraDerechaMovidaAnterior);
 
         }else{
 
             deshacerEnroque(true,false);
-			restaurarEstadoMovimiento(
 
-    reyBlancoMovidoAnterior,
-    reyNegroMovidoAnterior,
-
-    torreBlancaIzquierdaMovidaAnterior,
-    torreBlancaDerechaMovidaAnterior,
-
-    torreNegraIzquierdaMovidaAnterior,
-    torreNegraDerechaMovidaAnterior);
         }
 
     }else{
 
         deshacerMovimiento(filaOrigen, filaDestino,
                            columnaOrigen, columnaDestino,
-                           piezaMovida, piezaCapturada, fueCapturaAlPaso);
-                           
-        restaurarEstadoMovimiento(
-
-    reyBlancoMovidoAnterior,
-    reyNegroMovidoAnterior,
-
-    torreBlancaIzquierdaMovidaAnterior,
-    torreBlancaDerechaMovidaAnterior,
-
-    torreNegraIzquierdaMovidaAnterior,
-    torreNegraDerechaMovidaAnterior);
+                           piezaMovida, piezaCapturada);
 
     }
 
     cout<<"Movimiento inválido: El rey blanco queda en jaque"<<endl;
     return;
+    }
+
+    if(reyAhogado(true)){
+
+        cout<<"TABLAS: Rey ahogado."<<endl;
+
+        ganador = "Empate";
+
+        finDePartida = true;
+
+        return;
+
     }
 
 }else{
@@ -2300,30 +2160,10 @@ if(movimientoRealizado){
         if(columnaDestino > columnaOrigen){
 
             deshacerEnroque(false,true);
-            restaurarEstadoMovimiento(
-
-    reyBlancoMovidoAnterior,
-    reyNegroMovidoAnterior,
-
-    torreBlancaIzquierdaMovidaAnterior,
-    torreBlancaDerechaMovidaAnterior,
-
-    torreNegraIzquierdaMovidaAnterior,
-    torreNegraDerechaMovidaAnterior);
 
         }else{
 
             deshacerEnroque(false,false);
-            restaurarEstadoMovimiento(
-
-    reyBlancoMovidoAnterior,
-    reyNegroMovidoAnterior,
-
-    torreBlancaIzquierdaMovidaAnterior,
-    torreBlancaDerechaMovidaAnterior,
-
-    torreNegraIzquierdaMovidaAnterior,
-    torreNegraDerechaMovidaAnterior);
 
         }
 
@@ -2331,18 +2171,7 @@ if(movimientoRealizado){
 
         deshacerMovimiento(filaOrigen, filaDestino,
                            columnaOrigen, columnaDestino,
-                           piezaMovida, piezaCapturada, fueCapturaAlPaso);
-        
-        restaurarEstadoMovimiento(
-
-    reyBlancoMovidoAnterior,
-    reyNegroMovidoAnterior,
-
-    torreBlancaIzquierdaMovidaAnterior,
-    torreBlancaDerechaMovidaAnterior,
-
-    torreNegraIzquierdaMovidaAnterior,
-    torreNegraDerechaMovidaAnterior);
+                           piezaMovida, piezaCapturada);
 
     }
 
@@ -2351,28 +2180,33 @@ if(movimientoRealizado){
 
     }
 
-}
+    if(reyAhogado(false)){
 
-// Actualizar captura al paso solamente después de un movimiento válido
+        cout << "TABLAS: Rey ahogado." << endl;
 
-capturaAlPasoDisponible = false;
+        ganador = "Empate";
 
-if((piezaMovida == 'P' || piezaMovida == 'p') &&
-   abs(filaDestino - filaOrigen) == 2){
+        finDePartida = true;
 
-    capturaAlPasoDisponible = true;
+        return;
 
-    filaPeonAlPaso = filaDestino;
-    columnaPeonAlPaso = columnaDestino;
-
-    peonAlPasoBlanco = isupper(piezaMovida);
+    }
 
 }
 
-guardarMovimiento(origen,destino);
-//Cambio de turno.
+jugada = notacionPieza(piezaMovida) + destino;
+
+historial.push_back(jugada);
+
+// Si el movimiento NO fue un avance doble de un peón, ya no existe posibilidad de captura al paso.
+if(!(piezaMovida == 'P' && filaOrigen - filaDestino == 2) &&
+   !(piezaMovida == 'p' && filaDestino - filaOrigen == 2)){
+
+    enPassantValido = false;
+
+}
+
 turnoBlanco = !turnoBlanco;
-
 if(turnoBlanco){
 
     // Ahora juegan las blancas.
@@ -2385,12 +2219,15 @@ if(turnoBlanco){
 
     if(jaqueMate(true)){
         cout<<"¡¡JAQUE MATE!! Ganaron las negras"<<endl;
+        ganador = jugadorNegro;
 		
 		mostrarTablero();
 		
 		actualizarPuntaje(jugadorNegro,1);
 		
-        exit(0);
+        finDePartida = true;
+
+        return;
 
     }
 
@@ -2408,48 +2245,232 @@ if(turnoBlanco){
     if(jaqueMate(false)){
 		
         cout<<"¡¡JAQUE MATE!! Ganaron las blancas"<<endl;
+        ganador = jugadorBlanco;
 		
 		mostrarTablero();
 		
 		actualizarPuntaje(jugadorBlanco,1);
 		
-        exit(0);
+        finDePartida = true;
+
+        return;
 
     }
 
 }
 
 }
-
-if(turnoBlanco){
-
-    if(tablas(true)){
-
-        cout<<"TABLAS: El jugador blanco no tiene movimientos legales"<<endl;
-        mostrarTablero();
-        exit(0);
-
-    }
-
-}else{
-
-    if(tablas(false)){
-
-        cout<<"TABLAS: El jugador negro no tiene movimientos legales"<<endl;
-        mostrarTablero();
-        exit(0);
-
-    }
-
-}
-
 // Revisar si un peón llegó al final del tablero
         promocionPeon();
+
+    // Comprueba si se hicieron 50 movimientos sin capturar piezas (de blanco y negro) para generar tablas 
+    if(contador50Movimientos >= 100){
+
+    cout << "TABLAS: Regla de los 50 movimientos." << endl;
+
+    ganador = "Empate";
+
+    finDePartida = true;
+
+    return;
+
 }
+    // Comprueba si existe insuficiencia de materiales
+    if(materialInsuficiente()){
+
+    cout << "TABLAS: Material insuficiente." << endl;
+
+    ganador = "Empate";
+
+    finDePartida = true;
+
+    return;
+
+}
+}
+
 
 }
 
-void IniciarTablero(){
+// Actualiza el puntaje del jugador ganador y guarda los cambios
+// en el archivo de puntajes.
+void actualizarPuntaje(string jugador, int puntosGanados){
+
+    map<string,int> puntajes;
+
+    ifstream archivoEntrada("puntajes.txt");
+
+    string nombre;
+    int puntos;
+
+    while(archivoEntrada >> nombre >> puntos){
+        puntajes[nombre] = puntos;
+    }
+
+    archivoEntrada.close();
+
+    puntajes[jugador] += puntosGanados;
+
+    ofstream archivoSalida("puntajes.txt");
+
+    for(auto jugador : puntajes){
+        archivoSalida << jugador.first << " " << jugador.second << endl;
+    }
+
+    archivoSalida.close();
+}
+
+// Muestra todos los puntajes almacenados en el archivo.
+void mostrarPuntajes(){
+
+    ifstream archivo("puntajes.txt");
+
+    if(!archivo.is_open()){
+
+        cout << "No existe el archivo de puntajes." << endl;
+        return;
+
+    }
+
+    string nombre;
+    int puntos;
+
+    cout << endl;
+    cout << "========== PUNTAJES ==========" << endl;
+
+    while(archivo >> nombre >> puntos){
+
+        cout << nombre << " : " << puntos << " puntos" << endl;
+
+    }
+
+    cout << "==============================" << endl << endl;
+
+    archivo.close();
+
+}
+
+// Muestra recursivamente todas las jugadas almacenadas en el historial.
+void mostrarHistorialRecursivo(vector<string> historial, int i){
+
+    if(i >= historial.size()){
+
+        return;
+
+    }
+
+    cout << historial[i] << endl;
+
+    mostrarHistorialRecursivo(historial, i + 1);
+
+}
+
+// Lee el historial almacenado en el archivo y lo muestra
+// utilizando una función recursiva.
+void mostrarHistorial(){
+
+    ifstream archivo("historial.txt");
+
+    if(!archivo.is_open()){
+
+        cout << "No existe historial." << endl;
+        return;
+
+    }
+
+    vector<string> historialArchivo;
+    string linea;
+
+    while(getline(archivo, linea)){
+
+        historialArchivo.push_back(linea);
+
+    }
+
+    archivo.close();
+
+    mostrarHistorialRecursivo(historialArchivo, 0);
+
+}
+
+// Guarda en el archivo la información completa de la partida
+// junto con todas las jugadas realizadas.
+void guardarHistorial(){
+
+    ofstream archivo("historial.txt", ios::app);
+
+    archivo << "==================================" << endl;
+    archivo << jugadorBlanco << " VS " << jugadorNegro <<endl;
+
+    archivo << "Blancas: " << jugadorBlanco << endl;
+    archivo << "Negras : " << jugadorNegro << endl;
+    archivo << "Ganador: " << ganador << endl << endl;
+
+    for(int i = 0; i < historial.size(); i++){
+
+        archivo << i + 1 << ". " << historial[i] << endl;
+
+    }
+
+    archivo << endl;
+
+    archivo.close();
+
+}
+
+// Permite consultar el historial y los puntajes, además de
+// eliminar ambos archivos si el usuario lo desea.
+void historialYPuntajes(){
+
+    while(true){
+
+        mostrarHistorial();
+        mostrarPuntajes();
+
+        cout << endl;
+        cout << "1. Volver al menu" << endl;
+        cout << "2. Eliminar historial y puntajes" << endl;
+        cout << "3. Salir" << endl;
+        cout << "Opcion: ";
+
+        int opcion;
+        cin >> opcion;
+
+        if(opcion == 1){
+
+            return;
+
+        }else if(opcion == 2){
+
+            ofstream historial("historial.txt");
+            historial.close();
+
+            ofstream puntajes("puntajes.txt");
+            puntajes.close();
+
+            cout << endl;
+            cout << "Historial y puntajes eliminados correctamente." << endl;
+            cout << endl;
+
+        }else if(opcion == 3){
+
+            cout << "¡Gracias por jugar!" << endl;
+            exit(0);
+
+        }else{
+
+            cout << "Opcion invalida." << endl;
+
+        }
+
+    }
+
+}
+
+
+void iniciarTablero(){
+
+    // Esta funcion crea el tablero
 
     tablero = {
         {'r', 'n' , 'b' , 'q' , 'k' , 'b' , 'n' , 'r'},
@@ -2635,8 +2656,16 @@ void mostrarTablero(){
 
         for(int j = 0; j < 8; j++){
 
-            cout << tablero[i][j];
+            if(tablero[i][j] == '.'){
 
+                cout<<" ";
+
+            }else{
+
+                cout << tablero[i][j];
+
+            }
+            
             if(j < 7){
                 cout << " | ";
             }
@@ -2658,101 +2687,30 @@ void mostrarTablero(){
 
 }
 
-void actualizarPuntaje(string jugador, int puntosGanados){
-
-    map<string,int> puntajes;
-
-    ifstream archivoEntrada("puntajes.txt");
-
-    string nombre;
-    int puntos;
-
-    while(archivoEntrada >> nombre >> puntos){
-        puntajes[nombre] = puntos;
-    }
-
-    archivoEntrada.close();
-
-    puntajes[jugador] += puntosGanados;
-
-    ofstream archivoSalida("puntajes.txt");
-
-    for(auto jugador : puntajes){
-        archivoSalida << jugador.first << " " << jugador.second << endl;
-    }
-
-    archivoSalida.close();
-}
-
-void mostrarPuntajes(){
-
-    ifstream archivo("puntajes.txt");
-
-    if(!archivo.is_open()){
-
-        cout << "No existe el archivo de puntajes." << endl;
-        return;
-
-    }
-
-    string nombre;
-    int puntos;
-
-    cout << endl;
-    cout << "========== PUNTAJES ==========" << endl;
-
-    while(archivo >> nombre >> puntos){
-
-        cout << nombre << " : " << puntos << " puntos" << endl;
-
-    }
-
-    cout << "==============================" << endl << endl;
-
-    archivo.close();
-
-}
-
-void guardarMovimiento(string origen, string destino){
-
-    ofstream archivo("movimientos.txt", ios::app);
-
-    if(archivo.is_open()){
-
-        archivo << origen << "-" << destino << endl;
-
-        archivo.close();
-
-    }
-
-}
-
-int contarMovimientos(ifstream &archivo){
-
-    string linea;
-
-    if(!getline(archivo, linea)){
-
-        return 0;
-
-    }
-    
-    cout << linea << endl;
-
-    return 1 + contarMovimientos(archivo);
-
-}
-
 
 void partida(){
-	
+
+    // Se piden los nombres para los jugadores que escogan ser rey blanco o negro
 	cout << "Nombre del jugador de las blancas: ";
     cin >> jugadorBlanco;
 
     cout << "Nombre del jugador de las negras: ";
     cin >> jugadorNegro;
 
-    IniciarTablero();
+    // Reinicio de variables ya definidas antes de iniciar
+    finDePartida = false;
+    turnoBlanco = true;
+    enPassantValido = false;
+    reyBlancoMovido = false;
+    reyNegroMovido = false;
+    torreBlancaIzquierdaMovida = false;
+    torreBlancaDerechaMovida = false;
+    torreNegraIzquierdaMovida = false;
+    torreNegraDerechaMovida = false;
+    contador50Movimientos = 0;
+
+    // Llama a la función quien crea el tablero antes de la partida
+    iniciarTablero();
     
     //Jugadas para mostrar: blancas c4 -> b5
     //tableroJaque();
@@ -2778,8 +2736,9 @@ void partida(){
 	//Jugadas para mostrar: blancas c4 -> c7
 	//tableroAhogado();
 
-    while(true){
+    while(!finDePartida){
 
+        // Este ciclo llamara la funcion mostrarTablero y movimiento hasta que 'finDePartida' sea 'true'
         cout<<endl;
 
         mostrarTablero();
@@ -2788,137 +2747,198 @@ void partida(){
 
     }
 
+    // Cuando el ciclo se rompa mostrara el tablero una última vez
+    mostrarTablero();
+    guardarHistorial();
+
+    cout<<"Ganador: "<<ganador<<endl;
+
+    int opcion = 0;
+    cout<<"1. Regresar al menú"<<endl;
+    cout<<"2. Salir"<<endl;
+
+    do{
+
+        cout<<"Opción: ";
+        cin>>opcion;
+
+        if (opcion == 1){
+
+            return;
+
+        }else if (opcion == 2){
+
+            exit(0);
+
+        }else{
+
+            cout<<"Opción invalida"<<endl;
+        }
+
+    }while(opcion < 1 || opcion > 2);
+
+}
+
+void instrucciones(){
+
+    // Imprime todo el texto de instrucciones
+    cout<<"=============================================================="<<endl;
+	cout<<"                    INSTRUCCIONES DEL JUEGO                   "<<endl;
+	cout<<"=============================================================="<<endl;
+	cout<<endl;
+
+	cout<<"OBJETIVO DEL JUEGO" << endl;
+	cout<<"El objetivo del ajedrez es dar jaque mate al rey enemigo."<<endl;
+	cout<<"Un rey esta en jaque mate cuando no puede escapar de un"<<endl;
+	cout<<"ataque y la partida termina inmediatamente."<<endl;
+	cout<<endl;
+
+	cout<<"MOVIMIENTO DE LAS PIEZAS"<<endl;
+	cout<<"- Peon (P): Avanza una casilla. En su primer movimiento"<<endl;
+	cout<<"  puede avanzar dos casillas. Captura en diagonal."<<endl;
+	cout<<"- Torre (R): Se mueve cualquier cantidad de casillas en"<<endl;
+	cout<<"  linea recta, horizontal o vertical."<<endl;
+	cout<<"- Caballo (N): Se mueve en forma de L y puede saltar"<<endl;
+	cout<<"  sobre otras piezas."<<endl;
+	cout<<"- Alfil (B): Se mueve cualquier cantidad de casillas en"<<endl;
+	cout<<"  diagonal."<<endl;
+	cout<<"- Reina (Q): Combina los movimientos de la torre y el"<<endl;
+	cout<<"  alfil."<<endl;
+	cout<<"- Rey (K): Se mueve una casilla en cualquier direccion."<<endl;
+	cout<<endl;
+
+	cout<<"REGLAS ESPECIALES"<<endl;
+	cout<<"- Enroque: Se realiza si el rey y la torre no se han"<<endl;
+	cout<<"  movido y no existen piezas entre ellos."<<endl;
+	cout<<"- Promocion: Cuando un peon llega al extremo opuesto del"<<endl;
+	cout<<"  tablero puede convertirse en Reina, Torre, Alfil o"<<endl;
+	cout<<"  Caballo."<<endl;
+	cout<<endl;
+
+	cout<<"COMO JUGAR"<<endl;
+	cout<<"Ingrese primero la casilla de origen y luego la casilla"<<endl;
+	cout<<"de destino utilizando la notacion del tablero."<<endl;
+	cout<<endl;
+	cout<<"Ejemplos:"<<endl;
+	cout<<"Origen : e2"<<endl;
+	cout<<"Destino: e4"<<endl;
+	cout<<endl;
+	cout<< "Origen : g1"<<endl;
+	cout<<"Destino: f3"<<endl;
+	cout<<endl;
+
+	cout<<"El programa verificara automaticamente si el movimiento"<<endl;
+	cout<<"es valido segun las reglas del ajedrez."<<endl;
+	cout<<endl;
+
+	cout<<"HISTORIAL Y PUNTAJE"<<endl;
+	cout<<"Al finalizar una partida por jaque mate, el ganador"<<endl;
+	cout<<"obtendra un punto. Los puntajes se almacenan en el"<<endl;
+	cout<<"archivo 'puntajes.txt' y pueden consultarse desde el menu."<<endl;
+    cout<<endl;
+    cout<<"Además puede consultar el historial de partida almacenado en"<<endl;
+    cout<<"archivo historial.txt despues de cada partida"<<endl;
+	cout<<endl;
+
+	cout<<"=============================================================="<<endl;
+
+    // Se declara una variable 'opcion' para que el usuario escoga entre salir del programa o volver al menú y esto se usa mediante un ciclo do-while que solo se rompe con un return y un exit(0)
+    int opcion = 0;
+
+    do{
+
+        cout<<"1. Volver al menú"<<endl;
+        cout<<"2. Salir"<<endl;
+        cout<<"Opción: ";
+        cin>>opcion;
+
+        if(opcion == 1){
+
+            // En caso de volver a menú se usa return para terminar la función
+            return;
+        
+        }else if(opcion == 2){
+
+            // En caso de querer salir, se declara lo siguiente y termina el programa con un exit(0)
+            cout<<endl;
+            cout<<"¡Gracias por jugar!"<<endl;
+            cout<<endl;
+
+            exit(0);
+
+        }else{
+
+            // En caso de que la opción sea diferente de 1 y 2
+            cout<<endl;
+            cout<<"Opcion invalida."<<endl;
+            cout<<endl;
+
+        }
+
+    }while(true);
+
 }
 
 void menu(){
 
-    int opcion = 0;
+    // El menú principal del programa funciona con un ciclo do-while que solo se rompe con un return, las opciones se escogen poniendo un dígito de los que estan en pantalla
+    int opcion;
 
-    cout<<"========================================"<<endl;
-    cout<<"             Ajedrez en C++             "<<endl;
-    cout<<"========================================"<<endl;
+    while(true){
 
-    cout<<endl;
-
-    cout<<"1. Iniciar (PvP)"<<endl;
-	cout<<"2. Ver puntajes"<<endl;
-	cout<<"3. Contar movimientos"<<endl;
-	cout<<"4. Instrucciones"<<endl;
-	cout<<"5. Salir"<<endl;
-
-    do{
-
-        cout<<"Escoja su opción: ";
-        cin >> opcion;
-
+        cout<<"========================================"<<endl;
+        cout<<"             Ajedrez en C++             "<<endl;
+        cout<<"========================================"<<endl;
         cout<<endl;
 
-        if (opcion == 1){
+        cout<<"1. Iniciar (PvP)"<<endl;
+        cout<<"2. Mostrar Historial y puntajes"<<endl;
+        cout<<"3. Instrucciones"<<endl;
+        cout<<"4. Salir"<<endl;
 
+        cout<<"Escoja su opcion: ";
+        cin>>opcion;
+        cout<<endl;
+
+        if(opcion == 1){
+
+            // Ejecuta la funcion partida que es los preparativos para que empieze el programa en si
             partida();
 
-        }else if (opcion == 2){
+        }else if(opcion == 2){
 
-            mostrarPuntajes();
+            // Ejecuta esta función para mostrara el historial y puntajes
+            historialYPuntajes();
 
         }else if(opcion == 3){
 
-    ifstream archivo("movimientos.txt");
+            instrucciones();
 
-    if(!archivo.is_open()){
+        }else if(opcion == 4){
 
-        cout << "No hay movimientos registrados." << endl;
+            cout<<"¡Gracias por jugar!"<<endl;
+            exit(0);
 
-    }else{
+        }else{
 
-        cout << "===== HISTORIAL DE MOVIMIENTOS =====" << endl;
-
-    int cantidad = contarMovimientos(archivo);
-
-    cout << "===================================" << endl;
-    cout << "Total de movimientos: " << cantidad << endl;
-
-    archivo.close();
-
-    }
-
-	}else if (opcion == 4){
-
-            cout << "==============================================================" << endl;
-			cout << "                    INSTRUCCIONES DEL JUEGO                   " << endl;
-			cout << "==============================================================" << endl;
-			cout << endl;
-
-			cout << "OBJETIVO DEL JUEGO" << endl;
-			cout << "El objetivo del ajedrez es dar jaque mate al rey enemigo." << endl;
-			cout << "Un rey esta en jaque mate cuando no puede escapar de un" << endl;
-			cout << "ataque y la partida termina inmediatamente." << endl;
-			cout << endl;
-
-			cout << "MOVIMIENTO DE LAS PIEZAS" << endl;
-			cout << "- Peon (P): Avanza una casilla. En su primer movimiento" << endl;
-			cout << "  puede avanzar dos casillas. Captura en diagonal." << endl;
-			cout << "- Torre (R): Se mueve cualquier cantidad de casillas en" << endl;
-			cout << "  linea recta, horizontal o vertical." << endl;
-			cout << "- Caballo (N): Se mueve en forma de L y puede saltar" << endl;
-			cout << "  sobre otras piezas." << endl;
-			cout << "- Alfil (B): Se mueve cualquier cantidad de casillas en" << endl;
-			cout << "  diagonal." << endl;
-			cout << "- Reina (Q): Combina los movimientos de la torre y el" << endl;
-			cout << "  alfil." << endl;
-			cout << "- Rey (K): Se mueve una casilla en cualquier direccion." << endl;
-			cout << endl;
-
-			cout << "REGLAS ESPECIALES" << endl;
-			cout << "- Enroque: Se realiza si el rey y la torre no se han" << endl;
-			cout << "  movido y no existen piezas entre ellos." << endl;
-			cout << "- Promocion: Cuando un peon llega al extremo opuesto del" << endl;
-			cout << "  tablero puede convertirse en Reina, Torre, Alfil o" << endl;
-			cout << "  Caballo." << endl;
-			cout << endl;
-
-			cout << "COMO JUGAR" << endl;
-			cout << "Ingrese primero la casilla de origen y luego la casilla" << endl;
-			cout << "de destino utilizando la notacion del tablero." << endl;
-			cout << endl;
-			cout << "Ejemplos:" << endl;
-			cout << "Origen : e2" << endl;
-			cout << "Destino: e4" << endl;
-			cout << endl;
-			cout << "Origen : g1" << endl;
-			cout << "Destino: f3" << endl;
-			cout << endl;
-
-			cout << "El programa verificara automaticamente si el movimiento" << endl;
-			cout << "es valido segun las reglas del ajedrez." << endl;
-			cout << endl;
-
-			cout << "PUNTAJES" << endl;
-			cout << "Al finalizar una partida por jaque mate, el ganador" << endl;
-			cout << "obtendra un punto. Los puntajes se almacenan en el" << endl;
-			cout << "archivo 'puntajes.txt' y pueden consultarse desde el menu." << endl;
-			cout << endl;
-
-			cout << "==============================================================" << endl;
-            
-        }else if(opcion == 5){
-        	
-        	cout<<"Gracias por jugar";
-            cout<<endl;
-            
-		}else{
-
-            cout<<"Debes escoger un número entre 1 y 5"<<endl;
+            cout<<"Debes escoger un numero entre 1 y 4"<<endl;
 
         }
 
-    }while(opcion < 1 || opcion > 5);
+        cout << endl;
+
+    }
 
 }
 
 
 int main(){
-	setlocale(LC_ALL, "Spanish");
+
+    // Para poder usar caracteres del idioma español
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    // Inicia el programa con la función 'menu'
     menu();
 
 }

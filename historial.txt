@@ -1,0 +1,11 @@
+==================================
+Juan VS Nicolas
+Blancas: Juan
+Negras : Nicolas
+Ganador: Nicolas
+
+1. f3
+2. e5
+3. g4
+4. Qh4
+
