@@ -1,0 +1,8 @@
+Julián Camilo Soto Cárdenas - jusotoca@unal.edu.co
+Nicolas Steban Rojas Copete - nrojasco@unal.edu.co
+Juan Manuel Jiménez Niño - jujimenezn@unal.edu.co
+
+Proyecto: Ajedrez en C++
+
+Nuestro proyecto es la creación del juego ajedrez en C++ donde dos personas puedan jugar el juego con las reglas
+que existen, y que además se pueda correr dentro de consola y ver su historial de partida y puntaje
