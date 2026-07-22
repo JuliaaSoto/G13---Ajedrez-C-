@@ -1,11 +1,14 @@
 #include <iostream>
 #include <vector>
-#include <windows.h>
+#include <fstream>
+#include <map>
 
 using namespace std;
 
 vector<vector<char>> tablero(8, vector<char>(8));
 bool turnoBlanco = true;
+string jugadorBlanco;
+string jugadorNegro;
 
 bool peon(int fila_origen, int fila_destino,
           int columna_origen, int columna_destino);
@@ -24,15 +27,23 @@ bool rey(int fila_origen, int fila_destino,
 
 bool reina(int fila_origen, int fila_destino,
            int columna_origen, int columna_destino);
+           
+bool tablas(bool blancas);
+bool materialInsuficiente();
 
 bool capturaAlPasoDisponible = false;
-bool turnoCapturaAlPaso = false;
 
 int filaPeonAlPaso = -1;
 int columnaPeonAlPaso = -1;
 
+bool peonAlPasoBlanco;
+
 void promocionPeon();
 void mostrarTablero();
+void actualizarPuntaje(string jugador, int puntosGanados);
+void mostrarPuntajes();
+void guardarMovimiento(string origen, string destino);
+int contarMovimientos(ifstream &archivo);
                       
 bool reyBlancoMovido = false;
 bool reyNegroMovido = false;
@@ -115,26 +126,21 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
             }else if (columna_destino == columna_origen+1 || columna_destino == columna_origen-1){
 
-    			// Captura normal
-    			if(islower(tablero[fila_destino][columna_destino])){
+                if(islower(tablero[fila_destino][columna_destino])){
 
-        			return true;
+                    return true;
 
-    			}
+                }else{
 
-    			// Captura al paso
-    			if(capturaAlPasoDisponible &&
-       			fila_origen == filaPeonAlPaso &&
-       			columna_destino == columnaPeonAlPaso &&
-       			tablero[fila_destino][columna_destino] == '.'){
+                    validacion = false;
 
-        			return true;
+                }
 
-    			}
+            }else{
 
-    			validacion = false;
+                validacion = false;
 
-			}
+            }
 
         }else{
 
@@ -196,26 +202,21 @@ bool peon(int fila_origen, int fila_destino, int columna_origen, int columna_des
 
             }else if (columna_destino == columna_origen+1 || columna_destino == columna_origen-1){
 
-    			// Captura normal
-   				if(isupper(tablero[fila_destino][columna_destino])){
+                if(isupper(tablero[fila_destino][columna_destino])){
 
-        			return true;
+                    return true;
 
-    			}
+                }else{
 
-    			// Captura al paso
-    			if(capturaAlPasoDisponible &&
-       			fila_origen == filaPeonAlPaso &&
-       			columna_destino == columnaPeonAlPaso &&
-       			tablero[fila_destino][columna_destino] == '.'){
+                    validacion = false;
 
-        			return true;
+                }
 
-    			}
+            }else{
 
-    			validacion = false;
+                validacion = false;
 
-			}
+            }
 
         }else{
 
@@ -943,6 +944,153 @@ bool reyEnJaque(bool reyBlanco){
 
 }
 
+bool capturaAlPaso(int filaOrigen, int filaDestino,
+                   int columnaOrigen, int columnaDestino){
+
+    // Debe existir una captura al paso disponible
+    if(!capturaAlPasoDisponible){
+
+        return false;
+
+    }
+
+    char pieza = tablero[filaOrigen][columnaOrigen];
+
+    // Solo los peones pueden hacer captura al paso
+    if(pieza != 'P' && pieza != 'p'){
+
+        return false;
+
+    }
+
+    // El movimiento debe ser diagonal de una casilla
+    if(abs(columnaDestino - columnaOrigen) != 1){
+
+        return false;
+
+    }
+
+    if(abs(filaDestino - filaOrigen) != 1){
+
+        return false;
+
+    }
+	
+    // La casilla de destino debe estar vacía
+    if(tablero[filaDestino][columnaDestino] != '.'){
+
+        return false;
+
+    }
+
+    // ===========================
+    // Captura al paso de blancas
+    // ===========================
+    if(pieza == 'P'){
+    	
+		//Para blancas
+		if(tablero[filaPeonAlPaso][columnaPeonAlPaso] != 'p'){
+
+    		return false;
+
+		}
+
+        // El peón negro debe estar al lado
+        if(filaOrigen != filaPeonAlPaso){
+
+    		return false;
+
+		}
+
+
+		if(abs(columnaOrigen - columnaPeonAlPaso) != 1){
+
+    		return false;
+
+		}
+
+
+		if(columnaDestino != columnaPeonAlPaso){
+
+    		return false;
+
+		}
+
+        if(peonAlPasoBlanco){
+
+            return false;
+
+        }
+
+        // Eliminar el peón negro
+        tablero[filaPeonAlPaso][columnaPeonAlPaso] = '.';
+
+        // Mover el peón blanco
+        tablero[filaDestino][columnaDestino] = 'P';
+        tablero[filaOrigen][columnaOrigen] = '.';
+
+        capturaAlPasoDisponible = false;
+
+        return true;
+
+    }
+
+    // ===========================
+    // Captura al paso de negras
+    // ===========================
+    if(pieza == 'p'){
+		
+		//Para negras
+		if(tablero[filaPeonAlPaso][columnaPeonAlPaso] != 'P'){
+
+    		return false;
+
+		}
+	
+        // El peón blanco debe estar al lado
+        if(filaOrigen != filaPeonAlPaso){
+
+    		return false;
+
+		}
+
+
+		if(abs(columnaOrigen - columnaPeonAlPaso) != 1){
+
+    		return false;
+
+		}
+
+
+		if(columnaDestino != columnaPeonAlPaso){
+
+    		return false;
+
+		}
+
+        if(!peonAlPasoBlanco){
+
+            return false;
+
+        }
+
+        // Eliminar el peón blanco
+        tablero[filaPeonAlPaso][columnaPeonAlPaso] = '.';
+
+        // Mover el peón negro
+        tablero[filaDestino][columnaDestino] = 'p';
+        tablero[filaOrigen][columnaOrigen] = '.';
+
+        capturaAlPasoDisponible = false;
+
+        return true;
+
+    }
+
+    return false;
+
+}
+
 bool movimientoValido(int filaOrigen, int filaDestino,
                       int columnaOrigen, int columnaDestino){
 	
@@ -1157,32 +1305,38 @@ bool materialInsuficiente(){
 
     int peones = 0;
     int torres = 0;
-    int damas = 0;
+    int reinas = 0;
+
     int alfiles = 0;
     int caballos = 0;
 
-    for(int i=0;i<8;i++){
+    for(int i = 0; i < 8; i++){
 
-        for(int j=0;j<8;j++){
+        for(int j = 0; j < 8; j++){
 
-            switch(tolower(tablero[i][j])){
+            switch(tablero[i][j]){
 
+                case 'P':
                 case 'p':
                     peones++;
                     break;
 
+                case 'R':
                 case 'r':
                     torres++;
                     break;
 
+                case 'Q':
                 case 'q':
-                    damas++;
+                    reinas++;
                     break;
 
+                case 'B':
                 case 'b':
                     alfiles++;
                     break;
 
+                case 'N':
                 case 'n':
                     caballos++;
                     break;
@@ -1193,27 +1347,31 @@ bool materialInsuficiente(){
 
     }
 
-    if(peones==0 &&
-       torres==0 &&
-       damas==0){
+    // Si existe un peón, torre o reina todavía es posible hacer mate.
+    if(peones > 0 || torres > 0 || reinas > 0){
 
-        if(alfiles==0 && caballos==0){
+        return false;
 
-            return true; // Rey vs Rey
+    }
 
-        }
+    // Rey contra rey
+    if(alfiles == 0 && caballos == 0){
 
-        if(alfiles==1 && caballos==0){
+        return true;
 
-            return true; // Rey + Alfil vs Rey
+    }
 
-        }
+    // Rey + un alfil contra rey
+    if(alfiles == 1 && caballos == 0){
 
-        if(alfiles==0 && caballos==1){
+        return true;
 
-            return true; // Rey + Caballo vs Rey
+    }
 
-        }
+    // Rey + un caballo contra rey
+    if(alfiles == 0 && caballos == 1){
+
+        return true;
 
     }
 
@@ -1432,13 +1590,68 @@ bool enroque(int filaOrigen, int filaDestino, int columnaOrigen, int columnaDest
 
 void deshacerMovimiento(int fila_origen, int fila_destino,
                         int columna_origen, int columna_destino,
-                        char piezaMovida, char piezaCapturada){
+                        char piezaMovida, char piezaCapturada,
+                        bool fueCapturaAlPaso){
 
-    // Regresar la pieza a su casilla original
+    // Restaurar la pieza que se movió
+
     tablero[fila_origen][columna_origen] = piezaMovida;
 
-    // Restaurar la pieza que había en el destino
-    tablero[fila_destino][columna_destino] = piezaCapturada;
+
+    if(fueCapturaAlPaso){
+
+        // Restaurar el peón eliminado
+
+        if(piezaMovida == 'P'){
+
+            tablero[fila_destino + 1][columna_destino] = 'p';
+
+        }
+
+
+        if(piezaMovida == 'p'){
+
+            tablero[fila_destino - 1][columna_destino] = 'P';
+
+        }
+
+
+        // Vaciar la casilla donde terminó el peón
+
+        tablero[fila_destino][columna_destino] = '.';
+
+
+    }else{
+
+
+        // Movimiento normal
+
+        tablero[fila_destino][columna_destino] = piezaCapturada;
+
+
+    }
+
+}
+
+void restaurarEstadoMovimiento(
+
+    bool reyBlanco,
+    bool reyNegro,
+
+    bool torreBI,
+    bool torreBD,
+
+    bool torreNI,
+    bool torreND){
+
+    reyBlancoMovido = reyBlanco;
+    reyNegroMovido = reyNegro;
+
+    torreBlancaIzquierdaMovida = torreBI;
+    torreBlancaDerechaMovida = torreBD;
+
+    torreNegraIzquierdaMovida = torreNI;
+    torreNegraDerechaMovida = torreND;
 
 }
 
@@ -1868,6 +2081,37 @@ void movimiento (){
 	char piezaMovida = tablero[filaOrigen][columnaOrigen];
 	char piezaCapturada = tablero[filaDestino][columnaDestino];
 
+	// Guardar el estado de las banderas
+	bool reyBlancoMovidoAnterior = reyBlancoMovido;
+	bool reyNegroMovidoAnterior = reyNegroMovido;
+
+	bool torreBlancaIzquierdaMovidaAnterior = torreBlancaIzquierdaMovida;
+	bool torreBlancaDerechaMovidaAnterior = torreBlancaDerechaMovida;
+
+	bool torreNegraIzquierdaMovidaAnterior = torreNegraIzquierdaMovida;
+	bool torreNegraDerechaMovidaAnterior = torreNegraDerechaMovida;	
+
+	if(piezaCapturada == 'R'){
+
+    if(filaDestino == 7 && columnaDestino == 0)
+        torreBlancaIzquierdaMovida = true;
+
+    if(filaDestino == 7 && columnaDestino == 7)
+        torreBlancaDerechaMovida = true;
+
+}
+
+if(piezaCapturada == 'r'){
+
+    if(filaDestino == 0 && columnaDestino == 0)
+        torreNegraIzquierdaMovida = true;
+
+    if(filaDestino == 0 && columnaDestino == 7)
+        torreNegraDerechaMovida = true;
+
+}
+	bool fueCapturaAlPaso = false;
+	
 	bool movimientoRealizado = false;
 	bool fueEnroque = false;
     char piezaDestino = tablero[filaDestino][columnaDestino];
@@ -1888,21 +2132,49 @@ if(!turnoBlanco && islower(piezaDestino)){
 
 }
 
-if((pieza == 'K' || pieza == 'k') && abs(columnaDestino - columnaOrigen) == 2){
+if((pieza == 'K' || pieza == 'k') &&
+   abs(columnaDestino - columnaOrigen) == 2){
 
-    movimientoRealizado = enroque(filaOrigen, filaDestino,
-                                  columnaOrigen, columnaDestino);
+    movimientoRealizado = enroque(filaOrigen,
+                                  filaDestino,
+                                  columnaOrigen,
+                                  columnaDestino);
 
     if(movimientoRealizado){
 
-    	fueEnroque = true;
+        fueEnroque = true;
 
-	}
+    }
 
-}else{
+}
+else if(pieza == 'P' || pieza == 'p'){
 
-    movimientoRealizado = movimientoValido(filaOrigen, filaDestino,
-                                           columnaOrigen, columnaDestino);
+    movimientoRealizado = capturaAlPaso(filaOrigen,
+                                        filaDestino,
+                                        columnaOrigen,
+                                        columnaDestino);
+
+    if(movimientoRealizado){
+
+        fueCapturaAlPaso = true;
+
+    }
+    else{
+
+        movimientoRealizado = movimientoValido(filaOrigen,
+                                               filaDestino,
+                                               columnaOrigen,
+                                               columnaDestino);
+
+    }
+
+}
+else{
+
+    movimientoRealizado = movimientoValido(filaOrigen,
+                                           filaDestino,
+                                           columnaOrigen,
+                                           columnaDestino);
 
 }
 
@@ -1915,59 +2187,13 @@ if(!movimientoRealizado){
 
     if(movimientoRealizado){
 
-    if(!fueEnroque){
+    if(!fueEnroque && !fueCapturaAlPaso){
 
         tablero[filaDestino][columnaDestino] = piezaMovida;
         tablero[filaOrigen][columnaOrigen] = '.';
-        
-        // Si había una captura al paso pendiente y no se aprovechó,
-// desaparece el derecho.
-if(turnoCapturaAlPaso){
-
-    capturaAlPasoDisponible = false;
-    turnoCapturaAlPaso = false;
-
-}
-
-// Si un peón avanzó dos casillas, habilita la captura al paso.
-if((piezaMovida == 'P' || piezaMovida == 'p') &&
-   abs(filaDestino - filaOrigen) == 2){
-
-    capturaAlPasoDisponible = true;
-    turnoCapturaAlPaso = true;
-
-    filaPeonAlPaso = filaDestino;
-    columnaPeonAlPaso = columnaDestino;
-
-}
-		
 		
     }
-	    
-	    // Captura al paso blanca
-		if(piezaMovida == 'P' &&
-   		columnaOrigen != columnaDestino &&
-  		 piezaCapturada == '.'){
-
-    		tablero[filaDestino + 1][columnaDestino] = '.';
-    		
-    		capturaAlPasoDisponible = false;
-			turnoCapturaAlPaso = false;
-
-		}
-
-		// Captura al paso negra
-		if(piezaMovida == 'p' &&
-   		columnaOrigen != columnaDestino &&
-   		piezaCapturada == '.'){
-
-    		tablero[filaDestino - 1][columnaDestino] = '.';
-    		
-    		capturaAlPasoDisponible = false;
-    		turnoCapturaAlPaso = false;
-
-		}
-	    
+        
     if(piezaMovida == 'R'){
 
         if(filaOrigen == 7 && columnaOrigen == 0)
@@ -2015,18 +2241,48 @@ if(movimientoRealizado){
         if(columnaDestino > columnaOrigen){
 
             deshacerEnroque(true,true);
+            restaurarEstadoMovimiento(
+
+    reyBlancoMovidoAnterior,
+    reyNegroMovidoAnterior,
+
+    torreBlancaIzquierdaMovidaAnterior,
+    torreBlancaDerechaMovidaAnterior,
+
+    torreNegraIzquierdaMovidaAnterior,
+    torreNegraDerechaMovidaAnterior);
 
         }else{
 
             deshacerEnroque(true,false);
+			restaurarEstadoMovimiento(
 
+    reyBlancoMovidoAnterior,
+    reyNegroMovidoAnterior,
+
+    torreBlancaIzquierdaMovidaAnterior,
+    torreBlancaDerechaMovidaAnterior,
+
+    torreNegraIzquierdaMovidaAnterior,
+    torreNegraDerechaMovidaAnterior);
         }
 
     }else{
 
         deshacerMovimiento(filaOrigen, filaDestino,
                            columnaOrigen, columnaDestino,
-                           piezaMovida, piezaCapturada);
+                           piezaMovida, piezaCapturada, fueCapturaAlPaso);
+                           
+        restaurarEstadoMovimiento(
+
+    reyBlancoMovidoAnterior,
+    reyNegroMovidoAnterior,
+
+    torreBlancaIzquierdaMovidaAnterior,
+    torreBlancaDerechaMovidaAnterior,
+
+    torreNegraIzquierdaMovidaAnterior,
+    torreNegraDerechaMovidaAnterior);
 
     }
 
@@ -2044,10 +2300,30 @@ if(movimientoRealizado){
         if(columnaDestino > columnaOrigen){
 
             deshacerEnroque(false,true);
+            restaurarEstadoMovimiento(
+
+    reyBlancoMovidoAnterior,
+    reyNegroMovidoAnterior,
+
+    torreBlancaIzquierdaMovidaAnterior,
+    torreBlancaDerechaMovidaAnterior,
+
+    torreNegraIzquierdaMovidaAnterior,
+    torreNegraDerechaMovidaAnterior);
 
         }else{
 
             deshacerEnroque(false,false);
+            restaurarEstadoMovimiento(
+
+    reyBlancoMovidoAnterior,
+    reyNegroMovidoAnterior,
+
+    torreBlancaIzquierdaMovidaAnterior,
+    torreBlancaDerechaMovidaAnterior,
+
+    torreNegraIzquierdaMovidaAnterior,
+    torreNegraDerechaMovidaAnterior);
 
         }
 
@@ -2055,7 +2331,18 @@ if(movimientoRealizado){
 
         deshacerMovimiento(filaOrigen, filaDestino,
                            columnaOrigen, columnaDestino,
-                           piezaMovida, piezaCapturada);
+                           piezaMovida, piezaCapturada, fueCapturaAlPaso);
+        
+        restaurarEstadoMovimiento(
+
+    reyBlancoMovidoAnterior,
+    reyNegroMovidoAnterior,
+
+    torreBlancaIzquierdaMovidaAnterior,
+    torreBlancaDerechaMovidaAnterior,
+
+    torreNegraIzquierdaMovidaAnterior,
+    torreNegraDerechaMovidaAnterior);
 
     }
 
@@ -2066,35 +2353,31 @@ if(movimientoRealizado){
 
 }
 
-turnoBlanco = !turnoBlanco;
+// Actualizar captura al paso solamente después de un movimiento válido
 
-		// Revisar si un peón llegó al final del tablero
-        promocionPeon();
-        
-if(materialInsuficiente()){
+capturaAlPasoDisponible = false;
 
-    cout<<"TABLAS POR MATERIAL INSUFICIENTE"<<endl;
+if((piezaMovida == 'P' || piezaMovida == 'p') &&
+   abs(filaDestino - filaOrigen) == 2){
 
-    mostrarTablero();
+    capturaAlPasoDisponible = true;
 
-    exit(0);
+    filaPeonAlPaso = filaDestino;
+    columnaPeonAlPaso = columnaDestino;
+
+    peonAlPasoBlanco = isupper(piezaMovida);
 
 }
+
+guardarMovimiento(origen,destino);
+//Cambio de turno.
+turnoBlanco = !turnoBlanco;
 
 if(turnoBlanco){
 
     // Ahora juegan las blancas.
     // Revisar si el rey blanco está en jaque.
-	if(tablas(true)){
 
-    	cout<<"¡¡TABLAS POR AHOGADO!!"<<endl;
-
-    	mostrarTablero();
-
-    	exit(0);
-
-	}
-	
     if(reyEnJaque(true)){
 
     cout << "¡Jaque al rey blanco!" << endl;
@@ -2105,6 +2388,8 @@ if(turnoBlanco){
 		
 		mostrarTablero();
 		
+		actualizarPuntaje(jugadorNegro,1);
+		
         exit(0);
 
     }
@@ -2114,15 +2399,6 @@ if(turnoBlanco){
 }else{
 
     // Ahora juegan las negras.
-	if(tablas(false)){
-
-    	cout<<"¡¡TABLAS POR AHOGADO!!"<<endl;
-
-    	mostrarTablero();
-
-    	exit(0);
-
-	}
 
     if(reyEnJaque(false)){
 
@@ -2135,6 +2411,8 @@ if(turnoBlanco){
 		
 		mostrarTablero();
 		
+		actualizarPuntaje(jugadorBlanco,1);
+		
         exit(0);
 
     }
@@ -2143,9 +2421,34 @@ if(turnoBlanco){
 
 }
 
+if(turnoBlanco){
+
+    if(tablas(true)){
+
+        cout<<"TABLAS: El jugador blanco no tiene movimientos legales"<<endl;
+        mostrarTablero();
+        exit(0);
+
+    }
+
+}else{
+
+    if(tablas(false)){
+
+        cout<<"TABLAS: El jugador negro no tiene movimientos legales"<<endl;
+        mostrarTablero();
+        exit(0);
+
+    }
+
+}
+
+// Revisar si un peón llegó al final del tablero
+        promocionPeon();
 }
 
 }
+
 void IniciarTablero(){
 
     tablero = {
@@ -2355,8 +2658,99 @@ void mostrarTablero(){
 
 }
 
+void actualizarPuntaje(string jugador, int puntosGanados){
+
+    map<string,int> puntajes;
+
+    ifstream archivoEntrada("puntajes.txt");
+
+    string nombre;
+    int puntos;
+
+    while(archivoEntrada >> nombre >> puntos){
+        puntajes[nombre] = puntos;
+    }
+
+    archivoEntrada.close();
+
+    puntajes[jugador] += puntosGanados;
+
+    ofstream archivoSalida("puntajes.txt");
+
+    for(auto jugador : puntajes){
+        archivoSalida << jugador.first << " " << jugador.second << endl;
+    }
+
+    archivoSalida.close();
+}
+
+void mostrarPuntajes(){
+
+    ifstream archivo("puntajes.txt");
+
+    if(!archivo.is_open()){
+
+        cout << "No existe el archivo de puntajes." << endl;
+        return;
+
+    }
+
+    string nombre;
+    int puntos;
+
+    cout << endl;
+    cout << "========== PUNTAJES ==========" << endl;
+
+    while(archivo >> nombre >> puntos){
+
+        cout << nombre << " : " << puntos << " puntos" << endl;
+
+    }
+
+    cout << "==============================" << endl << endl;
+
+    archivo.close();
+
+}
+
+void guardarMovimiento(string origen, string destino){
+
+    ofstream archivo("movimientos.txt", ios::app);
+
+    if(archivo.is_open()){
+
+        archivo << origen << "-" << destino << endl;
+
+        archivo.close();
+
+    }
+
+}
+
+int contarMovimientos(ifstream &archivo){
+
+    string linea;
+
+    if(!getline(archivo, linea)){
+
+        return 0;
+
+    }
+    
+    cout << linea << endl;
+
+    return 1 + contarMovimientos(archivo);
+
+}
+
 
 void partida(){
+	
+	cout << "Nombre del jugador de las blancas: ";
+    cin >> jugadorBlanco;
+
+    cout << "Nombre del jugador de las negras: ";
+    cin >> jugadorNegro;
 
     IniciarTablero();
     
@@ -2373,7 +2767,7 @@ void partida(){
 	//tableroEnroqueLargo();
 	
 	//Jugadas para mostrar: negras d7 -> d5, blancas e5 -> d6
-	//tableroCapturaAlPaso();
+	//tableroCapturaAlPaso(); 
 	
 	//Jugadas para mostrar: blancas a7 -> a8
 	//tableroPromocion();
@@ -2383,7 +2777,7 @@ void partida(){
 	
 	//Jugadas para mostrar: blancas c4 -> c7
 	//tableroAhogado();
-	
+
     while(true){
 
         cout<<endl;
@@ -2407,8 +2801,10 @@ void menu(){
     cout<<endl;
 
     cout<<"1. Iniciar (PvP)"<<endl;
-    cout<<"2. Instrucciones"<<endl;
-    cout<<"3. Salir"<<endl;
+	cout<<"2. Ver puntajes"<<endl;
+	cout<<"3. Contar movimientos"<<endl;
+	cout<<"4. Instrucciones"<<endl;
+	cout<<"5. Salir"<<endl;
 
     do{
 
@@ -2423,31 +2819,106 @@ void menu(){
 
         }else if (opcion == 2){
 
-            cout<<"Función no hecha bruh";
+            mostrarPuntajes();
+
+        }else if(opcion == 3){
+
+    ifstream archivo("movimientos.txt");
+
+    if(!archivo.is_open()){
+
+        cout << "No hay movimientos registrados." << endl;
+
+    }else{
+
+        cout << "===== HISTORIAL DE MOVIMIENTOS =====" << endl;
+
+    int cantidad = contarMovimientos(archivo);
+
+    cout << "===================================" << endl;
+    cout << "Total de movimientos: " << cantidad << endl;
+
+    archivo.close();
+
+    }
+
+	}else if (opcion == 4){
+
+            cout << "==============================================================" << endl;
+			cout << "                    INSTRUCCIONES DEL JUEGO                   " << endl;
+			cout << "==============================================================" << endl;
+			cout << endl;
+
+			cout << "OBJETIVO DEL JUEGO" << endl;
+			cout << "El objetivo del ajedrez es dar jaque mate al rey enemigo." << endl;
+			cout << "Un rey esta en jaque mate cuando no puede escapar de un" << endl;
+			cout << "ataque y la partida termina inmediatamente." << endl;
+			cout << endl;
+
+			cout << "MOVIMIENTO DE LAS PIEZAS" << endl;
+			cout << "- Peon (P): Avanza una casilla. En su primer movimiento" << endl;
+			cout << "  puede avanzar dos casillas. Captura en diagonal." << endl;
+			cout << "- Torre (R): Se mueve cualquier cantidad de casillas en" << endl;
+			cout << "  linea recta, horizontal o vertical." << endl;
+			cout << "- Caballo (N): Se mueve en forma de L y puede saltar" << endl;
+			cout << "  sobre otras piezas." << endl;
+			cout << "- Alfil (B): Se mueve cualquier cantidad de casillas en" << endl;
+			cout << "  diagonal." << endl;
+			cout << "- Reina (Q): Combina los movimientos de la torre y el" << endl;
+			cout << "  alfil." << endl;
+			cout << "- Rey (K): Se mueve una casilla en cualquier direccion." << endl;
+			cout << endl;
+
+			cout << "REGLAS ESPECIALES" << endl;
+			cout << "- Enroque: Se realiza si el rey y la torre no se han" << endl;
+			cout << "  movido y no existen piezas entre ellos." << endl;
+			cout << "- Promocion: Cuando un peon llega al extremo opuesto del" << endl;
+			cout << "  tablero puede convertirse en Reina, Torre, Alfil o" << endl;
+			cout << "  Caballo." << endl;
+			cout << endl;
+
+			cout << "COMO JUGAR" << endl;
+			cout << "Ingrese primero la casilla de origen y luego la casilla" << endl;
+			cout << "de destino utilizando la notacion del tablero." << endl;
+			cout << endl;
+			cout << "Ejemplos:" << endl;
+			cout << "Origen : e2" << endl;
+			cout << "Destino: e4" << endl;
+			cout << endl;
+			cout << "Origen : g1" << endl;
+			cout << "Destino: f3" << endl;
+			cout << endl;
+
+			cout << "El programa verificara automaticamente si el movimiento" << endl;
+			cout << "es valido segun las reglas del ajedrez." << endl;
+			cout << endl;
+
+			cout << "PUNTAJES" << endl;
+			cout << "Al finalizar una partida por jaque mate, el ganador" << endl;
+			cout << "obtendra un punto. Los puntajes se almacenan en el" << endl;
+			cout << "archivo 'puntajes.txt' y pueden consultarse desde el menu." << endl;
+			cout << endl;
+
+			cout << "==============================================================" << endl;
+            
+        }else if(opcion == 5){
+        	
+        	cout<<"Gracias por jugar";
             cout<<endl;
+            
+		}else{
 
-        }else if (opcion == 3){
-
-            cout<<"Gracias por jugar";
-            cout<<endl;
-
-        }else{
-
-            cout<<"Debes escoger un número entre 1 y 3"<<endl;
+            cout<<"Debes escoger un número entre 1 y 5"<<endl;
 
         }
 
-    }while(opcion < 1 || opcion > 3);
+    }while(opcion < 1 || opcion > 5);
 
 }
 
 
 int main(){
-	//Utilizar tildes y "ñ"
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);	
 	setlocale(LC_ALL, "Spanish");
-	
     menu();
 
 }
